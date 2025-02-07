@@ -59,6 +59,15 @@ Example: `trc_save trace.bin`
 
 ## Notes
 
+The default configuration is as follows:
+
+* Trace buffer located at 0x2004_0000, the beginning of SRAM4.
+* Trace buffer size 8 kiB.
+* DMA channel number 12.
+* Cycle counting disabled
+* Branch broadcasting enabled.
+* TPIU formatter enabled.
+
 The trace data can be decoded with [ptm2human](https://github.com/czietz/ptm2human/). Be sure to use the `-e` (or `--decode-etmv4`) option. This fork of ptm2human has been adapted to the ARM Cortex M33. It also adds a new option `-n` (or `--unformatted`) to process traces that were captured while the TPIU formatter was disabled.
 
 It is advisable to keep “branch broadcasting” enabled (in the `trc_setup` command). The trace then contains an address whenever a change in program flow occurs and is much easier to follow in the disassembly or debugger.
