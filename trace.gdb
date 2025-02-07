@@ -1,7 +1,7 @@
 # buffer address for trace data in SRAM
 set $trc_bufaddr = 0x20040000
 # buffer size, must be a multiple of 4 bytes
-set $trc_bufsize = 512*4
+set $trc_bufsize = 8192
 # DMA channel, must not be used by application
 set $trc_dmachan = 12
 # whether to include cycle counts in trace, gives a bigger trace
@@ -54,6 +54,46 @@ end
 define trc_start
   dont-repeat
 
+  ## optionally support endless tracing into a circular buffer
+  if $argc > 0
+    set $trc__endless = $arg0
+  else
+    set $trc__endless = 0
+  end
+
+  ## tracing into circular buffer imposes restrictions on buffer
+  if $trc__endless
+
+    # gdb has no function to calculate log2 of size
+    if $trc_bufsize == 8192
+      set $trc__endless = 13
+    else
+    if $trc_bufsize == 16384
+      set $trc__endless = 14
+    else
+    if $trc_bufsize == 32768
+      set $trc__endless = 15
+    else
+      printf "Endless tracing requires 8/16/32 kiB buffer (bufsize=%d)\n", $trc_bufsize
+      printf "Switching to regular tracing.\n"
+      set $trc__endless = 0
+    end
+    end
+    end
+
+    if ($trc_bufaddr & ($trc_bufsize-1)) != 0
+      printf "Endless tracing requires %d kiB alignment of buffer (bufaddr=%p)\n", $trc_bufsize/1024, $trc_bufaddr
+      printf "Switching to regular tracing.\n"
+      set $trc__endless = 0
+    end
+
+  end
+
+  ## stop DMA if it was left running
+  set {long}0x50000464 = 1<<($trc_dmachan&15)
+  while ({long}0x50000464)
+  end
+
   ## stop ETM if it was running
   set $trc__etm = 0xe0041000
   # trcprgctlr = 0: stop the tracing
@@ -99,10 +139,17 @@ define trc_start
   set {long}($trc__dma+0x00) = 0x50700004
   # set DMA write address to buffer
   set {long}($trc__dma+0x04) = $trc_bufaddr
-  # set DMA transfer count in words
-  set {long}($trc__dma+0x08) = $trc_bufsize/4
-  # setup DMA: DREQ 53 (Coresight), write increment, 32 bit data size, enable, and trigger
-  set {long}($trc__dma+0x0c) = (53<<17) | (1<<6) | (2<<2) | 1
+  if $trc__endless == 0
+    # set DMA transfer count in words
+    set {long}($trc__dma+0x08) = $trc_bufsize/4
+    # setup DMA: DREQ 53 (Coresight), write increment, 32 bit data size, enable, and trigger
+    set {long}($trc__dma+0x0c) = (53<<17) | (1<<6) | (2<<2) | 1
+  else
+    # set DMA to endless mode
+    set {long}($trc__dma+0x08) = 0xFFFFFFFF
+    # setup DMA: DREQ 53 (Coresight), ring mode on write, write increment, 32 bit data size, enable, and trigger
+    set {long}($trc__dma+0x0c) = (53<<17) | (1<<12) | ($trc__endless<<8) | (1<<6) | (2<<2) | 1
+  end
   # start TPIU FIFO and clear overflow flag
   set {long}(0x50700000) = 2
 
@@ -134,9 +181,22 @@ define trc_save
   dont-repeat
   
   # note that gdb is a bit 'stupid' regarding the filename in 'dump'...
-  dump binary memory _tempdump.bin $trc_bufaddr $trc_bufaddr+$trc_bufsize
   # ... so we rename it afterwards
-  shell mv _tempdump.bin $arg0
+
+  if $trc__endless == 0
+    dump binary memory _tempdump.bin $trc_bufaddr $trc_bufaddr+$trc_bufsize
+    shell mv _tempdump.bin $arg0
+  else
+    # circular buffer: the next address the DMA would write to
+    set $trc__bufsplit = {long}($trc__dma+0x04)
+    # first/older part of the buffer
+    dump binary memory _tempdump1.bin $trc__bufsplit $trc_bufaddr+$trc_bufsize
+    # second/newer part of the buffer
+    dump binary memory _tempdump2.bin $trc_bufaddr $trc__bufsplit
+    # join together
+    shell cat _tempdump1.bin _tempdump2.bin > $arg0
+    shell rm _tempdump1.bin _tempdump2.bin
+  end
 end
 
 # documentation aka help texts
