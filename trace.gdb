@@ -179,6 +179,14 @@ end
 # save trace result
 define trc_save
   dont-repeat
+
+  # flush remaining data from formatter
+  set $trc__tpiu = 0x40148000
+  # FFCR: formatter on/off, manual flush and stop on flush
+  set {long}($trc__tpiu+0x304) = (1<<12) | (1<<6) | ($trc_formatter&1)
+  # FFSR: wait while flush is in progress
+  while ({long}($trc__tpiu+0x300)) & 1
+  end
   
   # note that gdb is a bit 'stupid' regarding the filename in 'dump'...
   # ... so we rename it afterwards
@@ -216,14 +224,27 @@ end
 
 document trc_start
 Enable ETM and start tracing the current program.
+Usage: trc_start [endless]
 
 Continues the program being debugged. Execution will continue until
-a breakpoint or signal is hit, or Ctrl-C is pressed. Tracing will
-automatically stop as soon as the defined trace buffer is full.
+a breakpoint or signal is hit, or Ctrl-C is pressed. An optional
+argument (0/1) specifies whether to enable endless tracing into a
+circular buffer. In case of endless tracing, the buffer must be 8/16/32
+kiB and aligned to a multiple of its size. It's also recommended to
+disable the TPIU formatter (see trc_setup) for endless tracing.
+
+If endless tracing is disabled, tracing will stop as soon as the trace
+buffer is full.
+
+Example: trc_start
 end
 
 document trc_save
 Save ETM trace to a file.
 Usage: trc_save FILENAME
+
+Note that the filename is passed to the shell for processing. Be careful
+with untrusted input.
+
 Example: trc_save trace.bin
 end
