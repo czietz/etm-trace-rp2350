@@ -6,6 +6,8 @@ The ARM Cortex M33 cores inside the Raspberry Pi RP2350 microcontroller (found o
 
 The script in this repository adds custom commands to gdb (the GNU debugger). They allow to configure everything required for instruction tracing: ETM, funnel, TPIU, DMA. The trace is stored in memory, can be downloaded with gdb, and analysed with tools such as [ptm2human](https://github.com/czietz/ptm2human/).
 
+There is an option for “endless” tracing into a circular buffer. This permits capturing the last kilobytes of trace data until an exception or breakpoint is hit to reconstruct how program flow was immediately prior to the exception or breakpoint.
+
 ## Demo session
 
 ![Animated demo session](./img/demo4.gif)
