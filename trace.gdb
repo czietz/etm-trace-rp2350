@@ -31,6 +31,8 @@ set $trc_ccount = 0
 set $trc_bbroadc = 1
 # whether to enable formatter, required for decoding multiplexed streams
 set $trc_formatter = 1
+# insert timestamp every N cycles (0 to disable)
+set $trc_tstamp = 0
 
 # allow to redefine the parameters at runtime
 define trc_setup
@@ -42,6 +44,7 @@ define trc_setup
     printf "Cycle counting: %d\n", $trc_ccount
     printf "Branch broadcasting: %d\n", $trc_bbroadc
     printf "Formatter: %d\n", $trc_formatter
+    printf "Timestamping: %d\n", $trc_tstamp
   end
 
   if $argc > 0
@@ -68,6 +71,9 @@ define trc_setup
     set $trc_formatter = $arg5
   end
 
+  if $argc > 6
+    set $trc_tstamp = $arg6
+  end
 
 end
 
@@ -126,8 +132,14 @@ define trc_start
   ## clear trace memory
   eval "monitor mww %d 0 %d", $trc_bufaddr, $trc_bufsize/4
   
-  ## setup timestamp generator (though it is not used by default)
-  set {long}0x40146000 = 1
+  ## setup timestamp generator and reset count value
+  # stop
+  set {long}0x40146000 = 0
+  # reset counter
+  set {long}0x40146008 = 0
+  set {long}0x4014600c = 0
+  # start
+  set {long}0x40146000 = 3
 
   ## setup funnel: bit 1 is Core0 ETM, bit3 is Core1 ETM
   # read CPUID to determine core
@@ -175,15 +187,24 @@ define trc_start
   set {long}(0x50700000) = 2
 
   ## setup ETM: note that it needs to be stopped, which happened above
-  # trcconfigr = branch broadcasting, cycle counting
-  set {long}($trc__etm+0x010) = ($trc_bbroadc&1)<<3 | ($trc_ccount&1)<<4
+  # trcconfigr = branch broadcasting, cycle counting, timestamping
+  set {long}($trc__etm+0x010) = ($trc_bbroadc&1)<<3 | ($trc_ccount&1)<<4 | (($trc_tstamp>0)<<11)
   # trceventctl0r = trceventctl1r = 0: disable all event tracing
   set {long}($trc__etm+0x020) = 0
   set {long}($trc__etm+0x024) = 0
   # trcstallctlr = 0: disable stalling of CPU
   set {long}($trc__etm+0x02c) = 0
-  # trctsctlr = 0: disable timestamp event
-  set {long}($trc__etm+0x030) = 0
+  # trccntrldvr0: set counter reload value
+  set {long}($trc__etm+0x140) = $trc_tstamp
+  # trcrsctlr2: resource selection for event 2: counter at zero
+  set {long}($trc__etm+0x208) = (2<<16) | 1
+  if $trc_tstamp>0
+    # trctsctlr = 2: timestamp on event 2
+    set {long}($trc__etm+0x030) = 2
+  else
+    # trctsctlr = 0: disable timestamp event
+    set {long}($trc__etm+0x030) = 0
+  end
   # trctraceidr = 0x01: set trace ID (note: seems not to be documented on RP2350?)
   set {long}($trc__etm+0x040) = $trc__cpuid + 1
   # trcccctlr = 0: no threshold between cycle-count packets
@@ -231,12 +252,13 @@ end
 # documentation aka help texts
 document trc_setup
 Configure ETM tracing options.
-Usage: trc_setup [addr] [size] [dmachan] [ccount] [bbroadc] [formatter]
+Usage: trc_setup [addr] [size] [dmachan] [ccount] [bbroadc] [formatter] [tstamp]
 
 Arguments are the address of the trace buffer in memory, the size of
 the buffer, the DMA channel number (0-15), whether to enable cycle
 counting (0/1), whether to enable branch broadcasting (0/1), whether
-to enable the TPIU formatter (0/1). Trailing arguments can be omitted.
+to enable the TPIU formatter (0/1), whether to insert a timestamp every
+N cycles (0<N<65536, 0 to disable). Trailing arguments can be omitted.
 The options are applied during the next invocation of trc_start.
 Calling without arguments prints the current configuration.
 

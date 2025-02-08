@@ -29,9 +29,9 @@ No changes to your code are necessary. However, you must provide a memory buffer
 
 Configure ETM tracing options.
 
-Usage: `trc_setup [addr] [size] [dmachan] [ccount] [bbroadc] [formatter]`
+Usage: `trc_setup [addr] [size] [dmachan] [ccount] [bbroadc] [formatter] [tstamp]`
 
-Arguments are the address of the trace buffer in memory, the size of the buffer, the DMA channel number (0-15), whether to enable cycle counting (0/1), whether to enable branch broadcasting (0/1), whether to enable the TPIU formatter (0/1). Trailing arguments can be omitted. The options are applied during the next invocation of trc_start. Calling without arguments prints the current configuration.
+Arguments are the address of the trace buffer in memory, the size of the buffer, the DMA channel number (0-15), whether to enable cycle counting (0/1), whether to enable branch broadcasting (0/1), whether to enable the TPIU formatter (0/1), whether to insert a timestamp every N cycles (0<N<65536, 0 to disable). Trailing arguments can be omitted. The options are applied during the next invocation of trc_start. Calling without arguments prints the current configuration.
 
 Example: `trc_setup 0x20040000 4096`
 
