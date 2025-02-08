@@ -15,7 +15,7 @@ There is an option for “endless” tracing into a circular buffer. This permit
 ## Prerequisites for use
 
 * Hardware using the RP2350 microcontroller, such as the Raspberry Pi Pico 2 / Pico 2 W. The RP2040 – used on the original Pi Pico – does not contain the ETM hardware.
-* An gdb and openocd setup for debugging, as described in Raspberry Pi’s _Getting started_ guide.
+* An gdb and openocd setup for debugging, as described in Raspberry Pi’s [Getting started with Raspberry Pi Pico-series](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf) guide.
 
 ## Setup
 
@@ -67,6 +67,7 @@ The default configuration is as follows:
 * Cycle counting disabled
 * Branch broadcasting enabled.
 * TPIU formatter enabled.
+* Timestamp insertion disabled.
 
 The trace data can be decoded with [ptm2human](https://github.com/czietz/ptm2human/). Be sure to use the `-e` (or `--decode-etmv4`) option. This fork of ptm2human has been adapted to the ARM Cortex M33. It also adds a new option `-n` (or `--unformatted`) to process traces that were captured while the TPIU formatter was disabled.
 
