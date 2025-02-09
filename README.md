@@ -4,7 +4,7 @@ Copyright (c) 2025 Christian Zietz
 
 The ARM Cortex M33 cores inside the Raspberry Pi RP2350 microcontroller (found on the [Raspberry Pi Pico 2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) / Pico 2 W) have quite sophisticated capabilities to non-intrusively trace the execution of code. This is achieved via the ARM ETM (Embedded Trace Macrocell). The ARM ETM lets you record a history of what the processor was doing – like how it branched – without actually changing the behavior of your code. This is especially helpful for debugging. You can capture detailed execution data without inserting breakpoints or extra code that might alter timing or behavior. This means you’re seeing the system run as it normally would. The trace data provides a precise time-line of  executed instructions, which can help you pinpoint exactly where your  code might be misbehaving or diverging from expected behavior.
 
-The script in this repository adds custom commands to gdb (the GNU debugger). They allow to configure everything required for instruction tracing: ETM, funnel, TPIU, DMA. The trace is stored in memory, can be downloaded with gdb, and analysed with tools such as [ptm2human](https://github.com/czietz/ptm2human/).
+The script in this repository adds custom commands to GDB (the GNU debugger). They allow to configure everything required for instruction tracing: ETM, funnel, TPIU, DMA. The trace is stored in memory, can be downloaded with GDB, and analysed with tools such as [ptm2human](https://github.com/czietz/ptm2human/).
 
 There is an option for “endless” tracing into a circular buffer. This permits capturing the last kilobytes of trace data until an exception or breakpoint is hit to reconstruct how program flow was immediately prior to the exception or breakpoint.
 
@@ -15,11 +15,11 @@ There is an option for “endless” tracing into a circular buffer. This permit
 ## Prerequisites for use
 
 * Hardware using the RP2350 microcontroller, such as the Raspberry Pi Pico 2 / Pico 2 W. The RP2040 – used on the original Pi Pico – does not contain the ETM hardware.
-* An gdb and openocd setup for debugging, as described in Raspberry Pi’s [Getting started with Raspberry Pi Pico-series](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf) guide.
+* An GDB and openocd setup for debugging, as described in Raspberry Pi’s [Getting started with Raspberry Pi Pico-series](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf) guide.
 
 ## Setup
 
-Integrate the custom commands into your gdb session by running the gdb command `source trace.gdb`. You might also add this to your `.gdbinit` file.
+Integrate the custom commands into your GDB session by running the GDB command `source trace.gdb`. You might also add this to your `.gdbinit` file.
 
 No changes to your code are necessary. However, you must provide a memory buffer for the trace data and a DMA channel on the RP2350. The memory occupied by the buffer and the chosen DMA channel must not be used by your application. The address and size of the buffer and the DMA channel number can be configured with the `trc_setup`  command.
 
@@ -53,7 +53,7 @@ Save ETM trace to a file.
 
 Usage: `trc_save FILENAME`
 
-Note that the filename is passed to the shell for processing. Be careful with untrusted input.
+Note that in endless tracing mode the filename is passed to the shell for processing. Be careful with untrusted input.
 
 Example: `trc_save trace.bin`
 
@@ -81,13 +81,13 @@ Instead of using a fixed memory address as trace buffer, you can also reserve sp
 uint32_t tracebuffer[2048];
 ```
 
-Then, you can reference the buffer in gdb:
+Then, you can reference the buffer in GDB:
 
 ```
 trc_setup tracebuffer sizeof(tracebuffer)
 ```
 
-Depending on your program, you might be able get the number of an unclaimed DMA channel with the following command within gdb:
+Depending on your program, you might be able get the number of an unclaimed DMA channel with the following command within GDB:
 
 ```
 call dma_claim_unused_channel(0)

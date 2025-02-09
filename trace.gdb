@@ -282,8 +282,8 @@ document trc_save
 Save ETM trace to a file.
 Usage: trc_save FILENAME
 
-Note that the filename is passed to the shell for processing. Be careful
-with untrusted input.
+Note that in endless tracing mode the filename is passed to the shell
+for processing. Be careful with untrusted input.
 
 Example: trc_save trace.bin
 end
