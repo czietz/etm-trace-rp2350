@@ -230,12 +230,8 @@ define trc_save
   while ({long}($trc__tpiu+0x300)) & 1
   end
   
-  # note that gdb is a bit 'stupid' regarding the filename in 'dump'...
-  # ... so we rename it afterwards
-
   if $trc__endless == 0
-    dump binary memory _tempdump.bin $trc_bufaddr $trc_bufaddr+$trc_bufsize
-    shell mv _tempdump.bin $arg0
+    dump binary memory $arg0 $trc_bufaddr $trc_bufaddr+$trc_bufsize
   else
     # circular buffer: the next address the DMA would write to
     set $trc__bufsplit = {long}($trc__dma+0x04)
